@@ -216,21 +216,24 @@ class ChatermBridgeService {
   // ---------- model listing ----------
 
   private buildAvailableModels(): AvailableModel[] {
-    const primary = ravenClientAIRuntime.getRoutes()[0]
-    if (!primary) return []
-
-    return [
-      ...new Set([primary.model, primary.small_fast_model].filter((model): model is string => Boolean(model)))
-    ].map((modelId) => ({
-      providerId: serviceProviderId(primary.slot),
-      modelId,
-      displayName: modelId,
-      capabilities: {
-        tools: primary.capabilities.tool_use,
-        vision: primary.capabilities.image_input,
-        streaming: primary.capabilities.partial_streaming
+    const models = new Map<string, AvailableModel>()
+    // Requests identify models by ID only, so retain the first route for duplicate IDs.
+    for (const route of ravenClientAIRuntime.getRoutes()) {
+      for (const modelId of [route.model, route.small_fast_model]) {
+        if (!modelId || models.has(modelId)) continue
+        models.set(modelId, {
+          providerId: serviceProviderId(route.slot),
+          modelId,
+          displayName: modelId,
+          capabilities: {
+            tools: route.capabilities.tool_use,
+            vision: route.capabilities.image_input,
+            streaming: route.capabilities.partial_streaming
+          }
+        })
       }
-    }))
+    }
+    return [...models.values()]
   }
 
   private getDefaultModelId(): string | null {
@@ -320,13 +323,16 @@ class ChatermBridgeService {
 
   private routesForRequestedModel(routes: RavenClientAIRoute[], requestedModelId?: string): RavenClientAIRoute[] {
     if (!routes.length) throw new Error('RavenAIService returned no usable model route')
-    const primary = routes[0]
-    const useSmallFastModel =
-      Boolean(primary.small_fast_model) &&
-      requestedModelId === primary.small_fast_model &&
-      requestedModelId !== primary.model
+    if (!requestedModelId) return routes
+    const selected = routes.find(
+      (route) => route.model === requestedModelId || route.small_fast_model === requestedModelId
+    )
+    if (!selected) throw new Error(`RavenAIService model "${requestedModelId}" is no longer available`)
 
-    return routes.map((route) => ({
+    const useSmallFastModel = requestedModelId === selected.small_fast_model && requestedModelId !== selected.model
+
+    // Honor an explicit backup selection, then preserve server order for the remaining fallbacks.
+    return [selected, ...routes.filter((route) => route !== selected)].map((route) => ({
       ...route,
       model: useSmallFastModel ? route.small_fast_model || route.model : route.model
     }))

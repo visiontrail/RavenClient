@@ -30,7 +30,7 @@ vi.mock('@renderer/services/RavenClientAIRuntime', () => ({
         api_key: provider.apiKey,
         model: provider.models[0].id,
         small_fast_model: provider.models[1]?.id || null,
-        capabilities: {
+        capabilities: provider.capabilities || {
           image_input: false,
           document_input: false,
           tool_use: true,
@@ -197,6 +197,116 @@ describe('ChatermBridgeService', () => {
         displayName: 'claude-3-5-sonnet'
       })
     ])
+  })
+
+  it('lists primary and backup models with their own capabilities and no credentials', () => {
+    mocks.providers = [
+      openAIProvider,
+      {
+        ...backupAnthropicProvider,
+        models: [{ id: 'claude-backup' }, { id: 'claude-backup-fast' }],
+        capabilities: { tool_use: false, image_input: true, partial_streaming: false }
+      }
+    ]
+    chatermBridgeService.start()
+
+    listeners[INTERNAL_CHANNELS.ListModels]({}, { replyChannel: 'reply:models' })
+
+    expect(send).toHaveBeenCalledWith(
+      'reply:models',
+      [
+        ['raven-service-primary', 'gpt-4.1', { tools: true, vision: false, streaming: true }],
+        ['raven-service-primary', 'gpt-4.1-mini', { tools: true, vision: false, streaming: true }],
+        ['raven-service-backup', 'claude-backup', { tools: false, vision: true, streaming: false }],
+        ['raven-service-backup', 'claude-backup-fast', { tools: false, vision: true, streaming: false }]
+      ].map(([providerId, modelId, capabilities]) => ({ providerId, modelId, displayName: modelId, capabilities }))
+    )
+  })
+
+  it('deduplicates model IDs within and across routes in server route order', () => {
+    mocks.providers = [
+      { ...anthropicProvider, models: [{ id: 'shared-model' }, { id: 'shared-model' }] },
+      { ...backupAnthropicProvider, models: [{ id: 'shared-model' }, { id: 'backup-fast' }] }
+    ]
+    chatermBridgeService.start()
+
+    listeners[INTERNAL_CHANNELS.ListModels]({}, { replyChannel: 'reply:models' })
+
+    expect(send).toHaveBeenCalledWith('reply:models', [
+      expect.objectContaining({ providerId: 'raven-service-primary', modelId: 'shared-model' }),
+      expect.objectContaining({ providerId: 'raven-service-backup', modelId: 'backup-fast' })
+    ])
+  })
+
+  it.each(['claude-backup', 'claude-backup-fast'])('executes the selected backup model %s first', async (modelId) => {
+    mocks.providers = [
+      anthropicProvider,
+      { ...backupAnthropicProvider, models: [{ id: 'claude-backup' }, { id: 'claude-backup-fast' }] }
+    ]
+    mocks.anthropicStreamFactory.mockReturnValue(
+      createAnthropicStream([{ type: 'content_block_delta', delta: { type: 'text_delta', text: 'selected answer' } }])
+    )
+    chatermBridgeService.start()
+
+    const events = await execute({
+      requestId: 'selected-backup',
+      modelId,
+      messages: [{ role: 'user', content: 'hello' }]
+    })
+
+    expect(mocks.anthropicStreamFactory).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ model: modelId }),
+      expect.objectContaining({ apiKey: 'backup-key', baseURL: backupAnthropicProvider.apiHost })
+    )
+    expect(events.filter((event) => event.type === 'start').map((event) => event.modelId)).toEqual([modelId])
+    expect(mocks.reportUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ slot: 'backup', model: modelId, status: 'succeeded' })
+    )
+  })
+
+  it('falls back from a selected backup fast model to the other route fast model before output', async () => {
+    mocks.providers = [
+      { ...anthropicProvider, models: [{ id: 'primary-model' }, { id: 'primary-fast' }] },
+      { ...backupAnthropicProvider, models: [{ id: 'backup-model' }, { id: 'backup-fast' }] }
+    ]
+    mocks.anthropicStreamFactory.mockImplementation((_params, options) => {
+      if (options.apiKey === 'backup-key') throw new Error('backup network unavailable')
+      return createAnthropicStream([
+        { type: 'content_block_delta', delta: { type: 'text_delta', text: 'fallback answer' } }
+      ])
+    })
+    chatermBridgeService.start()
+
+    const events = await execute({
+      requestId: 'backup-fallback',
+      modelId: 'backup-fast',
+      messages: [{ role: 'user', content: 'hello' }]
+    })
+
+    expect(mocks.anthropicStreamFactory.mock.calls.map(([params]) => params.model)).toEqual([
+      'backup-fast',
+      'primary-fast'
+    ])
+    expect(events.filter((event) => event.type === 'start').map((event) => event.modelId)).toEqual([
+      'backup-fast',
+      'primary-fast'
+    ])
+    expect(events.at(-1)).toEqual({ type: 'end', finishReason: 'stop' })
+    expect(mocks.refreshRoutes).toHaveBeenCalledOnce()
+  })
+
+  it('rejects a selected model removed by a capability refresh instead of silently using another model', async () => {
+    mocks.providers = [anthropicProvider]
+    chatermBridgeService.start()
+
+    const events = await execute({
+      requestId: 'removed-model',
+      modelId: 'removed-backup',
+      messages: [{ role: 'user', content: 'hello' }]
+    })
+
+    expect(mocks.anthropicStreamFactory).not.toHaveBeenCalled()
+    expect(events.at(-1)).toEqual(expect.objectContaining({ type: 'end', finishReason: 'error' }))
   })
 
   it('maps Anthropic text, tool calls, usage, and finish reason', async () => {

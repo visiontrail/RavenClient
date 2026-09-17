@@ -71,6 +71,7 @@ RavenAIService 还提供独立的浏览器控制台，以及通用 Agent 路由�
 
 - 内嵌 [Chaterm](https://github.com/visiontrail/ChatermForRaven)，支持 SSH/SFTP、跳板机、Kubernetes exec 和多面板会话。
 - AI 命令生成、解释、故障排查和智能体操作均通过受保护的 Raven LLM 桥接复用 RavenAIService 管理的模型。
+- 模型列表包含服务端的主模型、备用模型及其快速模型；请求优先使用所选模型，尚未开始输出内容或工具调用时可切换到其他路由。
 - 智能体命令会在可见终端中执行；推理流和 OpenAI 兼容的内容分片流会在展示前自动规范化。
 - 切换 Raven 页面时终端会话保持在线，内嵌界面会跟随 Raven 主题。
 

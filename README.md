@@ -71,6 +71,7 @@ After authentication, RavenClient fetches a time-limited model capability snapsh
 
 - Embedded [Chaterm](https://github.com/visiontrail/ChatermForRaven) with SSH/SFTP, jump hosts, Kubernetes exec, and multi-panel sessions.
 - AI command generation, explanation, troubleshooting, and Agent actions use RavenAIService-managed models through Raven's guarded LLM bridge.
+- The model selector includes primary and backup models, including their fast models. Requests try the selected model first and can fall back before any response or tool call starts.
 - Agent commands run in the visible terminal; reasoning streams and OpenAI-compatible content-part streams are normalized for display.
 - Terminal sessions remain alive while switching tabs, and the embedded UI follows Raven's theme.
 
