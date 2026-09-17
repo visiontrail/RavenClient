@@ -115,6 +115,8 @@ yarn dev
 
 服务地址由客户端统一解析，因此智能体、日志、软件包和内嵌服务页面会一起切换。
 
+`yarn dev` 和 `yarn debug` 会先重新构建内嵌 ChaTerm，并将产物复制到 `resources/chaterm`，再启动 Electron。修改 ChaTerm 源码后，请停止并重新运行启动命令；仅刷新窗口不会重新构建内嵌终端。
+
 ## 常用命令
 
 | 命令 | 用途 |

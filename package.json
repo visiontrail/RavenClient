@@ -24,8 +24,8 @@
   },
   "scripts": {
     "start": "electron-vite preview",
-    "dev": "NODE_OPTIONS=\"--max-old-space-size=8192\" electron-vite dev",
-    "debug": "electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
+    "dev": "npm run prepackage:chaterm && NODE_OPTIONS=\"--max-old-space-size=8192\" electron-vite dev",
+    "debug": "npm run prepackage:chaterm && electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
     "build": "npm run prepackage:chaterm && cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" npm run typecheck && NODE_OPTIONS=\"--max-old-space-size=8192\" electron-vite build",
     "build:no-check": "npm run prepackage:chaterm && NODE_OPTIONS=\"--max-old-space-size=8192\" electron-vite build",
     "build:chaterm": "node scripts/build-chaterm.js",

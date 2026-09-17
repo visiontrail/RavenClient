@@ -115,6 +115,8 @@ yarn dev
 
 The service URL is resolved centrally, so Agent, log, package, and embedded service pages all switch together.
 
+`yarn dev` and `yarn debug` rebuild the embedded ChaTerm and copy its output into `resources/chaterm` before starting Electron. After changing ChaTerm source, stop and rerun the command to refresh the embedded terminal; reloading the window alone does not rebuild it.
+
 ## Common Commands
 
 | Command | Purpose |
