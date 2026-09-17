@@ -39,3 +39,7 @@ To access settings: **Raven Settings → Display → Sidebar icons** (drag Termi
 - Main process services: `RavenLLMBridgeService`, `ChatermProcessService`
 - Source: `src/renderer/src/pages/terminal/`, `src/main/services/RavenLLMBridgeService.ts`, `src/main/services/ChatermProcessService.ts`
 - Chaterm submodule: `third_party/ChatermForRaven/` (branch `raven-embed`)
+
+### Terminal scope
+
+The embedded terminal does not expose the Database management workspace or SQL editor. Internal storage for terminal settings and history remains enabled.
