@@ -28,6 +28,8 @@ files:
   - '!scripts'
   - '!local'
   - '!docs'
+  - '!dist'
+  - '!third_party'
   - '!packages'
   - '!.swc'
   - '!.bin'
@@ -73,6 +75,12 @@ extraResources:
   # recurse it for code signing.
   - from: resources/chaterm
     to: chaterm
+    filter:
+      - '**/*'
+  # Separate matcher: electron-builder omits nested node_modules while copying
+  # the renderer resource tree above.
+  - from: resources/chaterm/node_modules
+    to: chaterm/node_modules
     filter:
       - '**/*'
   - from: third_party/ChatermForRaven/build/edition-config
@@ -136,6 +144,7 @@ publish:
   repo: Raven
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+beforePack: scripts/before-pack.js
 afterPack: scripts/after-pack.js
 afterSign: scripts/notarize.js
 artifactBuildCompleted: scripts/artifact-build-completed.js

@@ -69,3 +69,8 @@ $ yarn build:mac
 # For Linux
 $ yarn build:linux
 ```
+
+The macOS packaging hook stages the embedded Chaterm production dependencies
+and rebuilds its native modules for each target architecture. Install Command
+Line Tools before packaging. The installer excludes previous `dist` output and
+the Chaterm source checkout; runtime assets are bundled under `Resources/chaterm`.

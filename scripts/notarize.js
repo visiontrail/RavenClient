@@ -1,8 +1,8 @@
 require('dotenv').config()
 const { notarize } = require('@electron/notarize')
-const { execSync } = require('child_process')
+const { execFileSync } = require('child_process')
 const path = require('path')
-const { verifySignedBinaries } = require('./verify-notarization')
+const { collectChatermNativeBinaries, verifySignedBinaries } = require('./verify-notarization')
 
 exports.default = async function notarizing(context) {
   if (context.electronPlatformName !== 'darwin') {
@@ -17,17 +17,22 @@ exports.default = async function notarizing(context) {
   // enforces Team ID matching between process and loaded frameworks.
   if (!process.env.APPLE_ID || !process.env.APPLE_APP_SPECIFIC_PASSWORD || !process.env.APPLE_TEAM_ID) {
     console.log('  • No Apple credentials found, applying ad-hoc signature for Team ID consistency...')
-    try {
-      const entitlementsPath = path.join(__dirname, '../build/entitlements.mac.plist')
-      execSync(
-        `codesign --force --deep --sign - --timestamp=none --entitlements "${entitlementsPath}" "${appPath}"`,
-        { stdio: 'inherit' }
-      )
-      verifySignedBinaries(appPath, { log: (message) => console.log(`  • ${message}`) })
-      console.log('  • Ad-hoc signing complete:', appPath)
-    } catch (e) {
-      console.warn('  • Ad-hoc signing failed (app may not run on macOS 26+):', e.message)
+    const entitlementsPath = path.join(__dirname, '../build/entitlements.mac.plist')
+    // --deep alone does not sign native modules in arbitrary Resources folders.
+    // Sign those first, then seal the complete app bundle.
+    for (const binary of collectChatermNativeBinaries(appPath)) {
+      execFileSync('codesign', ['--force', '--sign', '-', '--timestamp=none', binary], { stdio: 'inherit' })
     }
+    execFileSync(
+      'codesign',
+      ['--force', '--deep', '--sign', '-', '--timestamp=none', '--entitlements', entitlementsPath, appPath],
+      { stdio: 'inherit' }
+    )
+    const result = verifySignedBinaries(appPath, { log: (message) => console.log(`  • ${message}`) })
+    if (result.failures.length > 0) {
+      throw new Error(`Ad-hoc signature verification failed for ${result.failures.length} native binaries`)
+    }
+    console.log('  • Ad-hoc signing complete:', appPath)
     return
   }
 

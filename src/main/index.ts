@@ -80,8 +80,11 @@ function appendNodePath(modulePath: string): void {
 
 function appendChatermDependencyPaths(): void {
   if (app.isPackaged) {
+    appendNodePath(path.join(process.resourcesPath, 'chaterm', 'node_modules'))
     appendNodePath(path.join(process.resourcesPath, 'app.asar', 'third_party', 'ChatermForRaven', 'node_modules'))
-    appendNodePath(path.join(process.resourcesPath, 'app.asar.unpacked', 'third_party', 'ChatermForRaven', 'node_modules'))
+    appendNodePath(
+      path.join(process.resourcesPath, 'app.asar.unpacked', 'third_party', 'ChatermForRaven', 'node_modules')
+    )
     return
   }
 
@@ -144,7 +147,9 @@ function loadChatermMain(): { mountChaterm: ChatermMountFn; unmountChaterm: Chat
   const entry = app.isPackaged
     ? path.join(process.resourcesPath, 'chaterm', 'main', 'index.js')
     : path.join(getResourcePath(), 'chaterm', 'main', 'index.js')
-  const resourcesPath = app.isPackaged ? path.join(process.resourcesPath, 'chaterm') : path.join(getResourcePath(), 'chaterm')
+  const resourcesPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'chaterm')
+    : path.join(getResourcePath(), 'chaterm')
   process.env.CHATERM_EMBEDDED_RESOURCES_PATH = resourcesPath
 
   logger.info('Chaterm embedded environment configured', { edition, resourcesPath })

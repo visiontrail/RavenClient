@@ -7,14 +7,7 @@ const { spawnSync } = require('node:child_process')
 
 const DEFAULT_DIST_DIR = path.resolve(__dirname, '..', 'dist')
 
-const MACHO_MAGICS = new Set([
-  'feedface',
-  'feedfacf',
-  'cefaedfe',
-  'cffaedfe',
-  'cafebabe',
-  'bebafeca'
-])
+const MACHO_MAGICS = new Set(['feedface', 'feedfacf', 'cefaedfe', 'cffaedfe', 'cafebabe', 'bebafeca'])
 
 function walk(dir, visit) {
   if (!fs.existsSync(dir)) return
@@ -69,7 +62,7 @@ function collectChatermNativeBinaries(appPath) {
   const candidateRoots = [
     path.join(resourcesDir, 'chaterm'),
     path.join(resourcesDir, 'app.asar.unpacked', 'resources', 'chaterm'),
-    path.join(resourcesDir, 'app.asar.unpacked', 'node_modules', 'node-pty')
+    path.join(resourcesDir, 'app.asar.unpacked')
   ]
 
   const binaries = new Set()
@@ -168,7 +161,9 @@ function main() {
     process.exit(1)
   }
 
-  console.log(`[verify-notarization] Complete: checked ${checked} Chaterm native binaries across ${apps.length} app bundle(s)`)
+  console.log(
+    `[verify-notarization] Complete: checked ${checked} Chaterm native binaries across ${apps.length} app bundle(s)`
+  )
 }
 
 if (require.main === module) {
