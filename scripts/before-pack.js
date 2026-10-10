@@ -7,9 +7,12 @@ const { findExternalRuntimeDependencies } = require('./external-runtime-dependen
 
 // Chaterm's separately built main bundle externalizes its runtime dependencies.
 // electron-builder only collects Raven's dependencies, so stage Chaterm's
-// production tree explicitly and rebuild its native modules for each macOS arch.
+// production tree explicitly and rebuild its native modules for each
+// target platform/arch. Skipping this on any platform leaves the embedded
+// Terminal unable to load its main bundle (MODULE_NOT_FOUND) and shows a
+// blank tab.
 exports.default = async function (context) {
-  if (context.electronPlatformName !== 'darwin') return
+  const platform = context.electronPlatformName
 
   const root = path.resolve(__dirname, '..')
   const submodule = path.join(root, 'third_party', 'ChatermForRaven')
@@ -33,7 +36,7 @@ exports.default = async function (context) {
     const supports = (values, value) =>
       !values ||
       (!values.includes(`!${value}`) && (!values.some((item) => !item.startsWith('!')) || values.includes(value)))
-    if (!supports(pkg.os, 'darwin') || !supports(pkg.cpu, arch)) return
+    if (!supports(pkg.os, platform) || !supports(pkg.cpu, arch)) return
     if (dependencies.has(dir)) return
     dependencies.add(dir)
     for (const child of Object.keys(pkg.dependencies || {})) collect(child, dir)
