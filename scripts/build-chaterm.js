@@ -51,10 +51,15 @@ function run(command, cwd, env = {}) {
   const result = spawnSync(cmd[0], cmd.slice(1), {
     cwd,
     stdio: 'inherit',
-    env: { ...process.env, ...env }
+    env: { ...process.env, ...env },
+    shell: process.platform === 'win32'
   })
+  if (result.error) {
+    console.error(`[build-chaterm] spawn error: ${result.error.message}`)
+    process.exit(1)
+  }
   if (result.status !== 0) {
-    console.error(`[build-chaterm] command failed (exit ${result.status}): ${cmd.join(' ')}`)
+    console.error(`[build-chaterm] command failed (exit ${result.status}, signal ${result.signal}): ${cmd.join(' ')}`)
     process.exit(result.status ?? 1)
   }
 }
