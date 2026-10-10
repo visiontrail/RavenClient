@@ -3,6 +3,7 @@ const fs = require('node:fs')
 const { createRequire, isBuiltin } = require('node:module')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
+const { findExternalRuntimeDependencies } = require('./external-runtime-dependencies')
 
 // Chaterm's separately built main bundle externalizes its runtime dependencies.
 // electron-builder only collects Raven's dependencies, so stage Chaterm's
@@ -47,10 +48,7 @@ exports.default = async function (context) {
   const entries = ['main/index.js', 'preload.js', 'index.js']
   for (const entry of entries) {
     const source = fs.readFileSync(path.join(root, 'resources', 'chaterm', entry), 'utf8')
-    for (const match of source.matchAll(/require\(["']([^"']+)["']\)/g)) {
-      const request = match[1]
-      if (request.startsWith('.') || isBuiltin(request) || request === 'electron') continue
-      const name = request.startsWith('@') ? request.split('/').slice(0, 2).join('/') : request.split('/')[0]
+    for (const name of findExternalRuntimeDependencies(source)) {
       collect(name, submodule)
       runtimeDependencies[name] = manifest.dependencies[name]
     }

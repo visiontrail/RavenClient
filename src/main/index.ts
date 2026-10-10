@@ -252,6 +252,20 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
   process.exit(0)
 } else {
+  // 注册早于窗口加载；已登录用户恢复会话时也需等待终端初始化完成。
+  let finishChatermStartup: () => void
+  const chatermStartup = new Promise<void>((resolve) => {
+    finishChatermStartup = resolve
+  })
+  ipcMain.handle(IpcChannel.Chaterm_GetStatus, async () => {
+    await chatermStartup
+    return {
+      isEnabled: chatermProcessService.isEnabled(),
+      hasAssets: chatermProcessService.hasAssets(),
+      preloadPath: chatermProcessService.getPreloadPath()
+    }
+  })
+
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
@@ -338,15 +352,11 @@ if (!app.requestSingleInstanceLock()) {
       logger.info('Chaterm process service started', { enabled: chatermProcessService.isEnabled() })
     } catch (error) {
       logger.error('Failed to start Chaterm process service:', error as Error)
+    } finally {
+      finishChatermStartup!()
     }
 
     // §6: Chaterm renderer↔main IPC handlers (called from Raven renderer, not from the webview)
-    ipcMain.handle(IpcChannel.Chaterm_GetStatus, () => ({
-      isEnabled: chatermProcessService.isEnabled(),
-      hasAssets: chatermProcessService.hasAssets(),
-      preloadPath: chatermProcessService.getPreloadPath()
-    }))
-
     ipcMain.handle(IpcChannel.Chaterm_AttachWebview, async (_event, webContentsId: number) => {
       const wc = webContents.fromId(webContentsId)
       if (!wc) {

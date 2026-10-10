@@ -12,6 +12,8 @@ import { join } from 'path'
 
 import icon from '../../../build/icon.png?asset'
 import { titleBarOverlayDark, titleBarOverlayLight } from '../config'
+import { getResourcePath } from '../utils'
+import { configureChatermWebview } from './chaterm/webviewPreferences'
 import { configManager } from './ConfigManager'
 import { contextMenu } from './ContextMenu'
 import { initSessionUserAgent } from './WebviewService'
@@ -155,24 +157,13 @@ export class WindowService {
       contextMenu.contextMenu(webContents)
     })
 
-    // Dangerous API
-    if (isDev) {
-      mainWindow.webContents.on('will-attach-webview', (_, webPreferences, params) => {
-        const isChatermWebview =
-          params.partition === 'persist:chaterm' ||
-          params.src?.startsWith('raven-chaterm://') ||
-          params.preload?.includes('/chaterm/preload.js')
+    // 内嵌终端的预加载依赖在正式版也需要同样的运行环境。
+    mainWindow.webContents.on('will-attach-webview', (_, webPreferences, params) => {
+      const preloadPath = join(app.isPackaged ? process.resourcesPath : getResourcePath(), 'chaterm', 'preload.js')
+      if (configureChatermWebview(webPreferences, params, preloadPath)) return
 
-        if (isChatermWebview) {
-          webPreferences.contextIsolation = true
-          webPreferences.nodeIntegration = false
-          webPreferences.sandbox = false
-          return
-        }
-
-        webPreferences.preload = join(__dirname, '../preload/index.js')
-      })
-    }
+      if (isDev) webPreferences.preload = join(__dirname, '../preload/index.js')
+    })
   }
 
   private setupWindowEvents(mainWindow: BrowserWindow) {

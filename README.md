@@ -100,7 +100,7 @@ corepack prepare yarn@4.9.1 --activate
 yarn install
 ```
 
-RavenClient connects to `http://127.0.0.1:8085` by default. Point it to another RavenAIService deployment with one of these configurations before starting the app:
+RavenClient connects to `http://10.60.11.3:8085` by default. Point it to another RavenAIService deployment with one of these configurations before starting the app:
 
 ```bash
 # Complete URL (takes precedence)

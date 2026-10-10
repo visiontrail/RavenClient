@@ -100,7 +100,7 @@ corepack prepare yarn@4.9.1 --activate
 yarn install
 ```
 
-RavenClient 默认连接 `http://127.0.0.1:8085`。启动前可以通过以下任一方式连接其他 RavenAIService 部署：
+RavenClient 默认连接 `http://10.60.11.3:8085`。启动前可以通过以下任一方式连接其他 RavenAIService 部署：
 
 ```bash
 # 完整 URL，优先级最高

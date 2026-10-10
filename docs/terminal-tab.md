@@ -13,7 +13,7 @@ Raven embeds [Chaterm](https://github.com/visiontrail/ChatermForRaven) — an AI
 
 ## How AI Works in Terminal
 
-Chaterm's AI features (command generation, error explanation, agent actions) all use the LLM provider you configure in **Raven Settings → Models**. You do not need to configure any AI keys inside the Terminal tab.
+Chaterm's AI features (command generation, error explanation, agent actions) use the models synchronized from **RavenAIService** after account login. You do not need to configure separate AI keys inside the Terminal tab.
 
 Token usage from Terminal AI calls appears in Raven's usage statistics with `source = "chaterm"`.
 
@@ -35,7 +35,9 @@ To access settings: **Raven Settings → Display → Sidebar icons** (drag Termi
 ## Architecture Notes (for developers)
 
 - Chaterm renders in an Electron `<webview>` at `raven-chaterm://app/index.html`; it is a separate renderer process and its crash does not affect Raven's main window
+- Both packaged and development builds configure the trusted terminal preload before attachment. The exception requires the terminal partition, local URL and exact bundled preload path; context isolation remains enabled and renderer Node integration remains disabled. Other webviews keep their existing preferences.
 - IPC channels: `raven:llm:*` (LLM bridge), `raven:ui:*` (theme/locale/navigate), `chaterm:*` (Chaterm internals — sender-validated)
+- Terminal status requests wait for startup to complete, including when restoring an existing login. Packaging stages both CommonJS and lazy ESM dependencies so model synchronization can serialize local settings.
 - Main process services: `RavenLLMBridgeService`, `ChatermProcessService`
 - Source: `src/renderer/src/pages/terminal/`, `src/main/services/RavenLLMBridgeService.ts`, `src/main/services/ChatermProcessService.ts`
 - Chaterm submodule: `third_party/ChatermForRaven/` (branch `raven-embed`)
